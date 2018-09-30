@@ -3,15 +3,31 @@ from flask import Response, render_template
 import json
 app = Flask(__name__)
 
-events = [
-        {"name": "party", "date": "today" },
-        {"name": "party", "date": "tomorrow" },
-        {"name": "party", "date": "yesterday" }
-        ]
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+db = SQLAlchemy(app)
+
+class Event(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    lat = db.Column(db.String(10), nullable=False)
+    lng = db.Column(db.String(10), nullable=False)
+
+    def __repr__(self):
+        return '<Event %r (%s, %s)>' % (self.name, self.lat, self.lng)
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
 @app.route("/api_hello")
 def hello():
 
-    return Response(json.dumps(events), mimetype="application/json")
+    loaded_events = Event.query.all()
+    return Response(json.dumps([x.as_dict() for x in loaded_events]),
+		    mimetype="application/json")
 
 
 @app.route('/')
